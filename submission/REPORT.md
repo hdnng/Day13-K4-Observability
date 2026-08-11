@@ -26,11 +26,14 @@
 
 ## 4. Prompt versioning
 
-- Prompt name:
-- Version/label baseline:
-- Version/label candidate:
-- Trace ID của mỗi version:
-- Bằng chứng đổi label hoặc rollback:
+- Prompt name: `day13-chat`
+- Version/label baseline: version 1, label `baseline`
+- Version/label candidate: version 2, label `candidate`
+- Trace baseline v1: xem `submission/evidence/m2_trace_baseline_v1.png`
+- Trace candidate v2: xem `submission/evidence/m2_trace_candidate_v2.png`
+- Danh sách tối thiểu 10 traces: xem `submission/evidence/m2_10_traces_list.png`
+- Bằng chứng đổi label production sang v2: xem `submission/evidence/m2_production_switched_to_v2.png`
+- Bằng chứng rollback production về v1: xem `submission/evidence/m2_production_rollback_to_v1.png`
 
 ## 5. Dashboard, SLO và alerts
 
