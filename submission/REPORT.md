@@ -2,10 +2,14 @@
 
 ## 1. Thông tin nhóm
 
-- Tên nhóm:
-- Repository URL:
-- Commit SHA cuối:
+- Tên nhóm: konichiwa
+- Repository URL: https://github.com/hdnng/Day13-K4-Observability
+- Commit SHA cuối: `c8361c65dfe5de4fa33f32911ccea0b4cbb74c9c`
 - Thành viên và vai trò:
+  - Son: M1 (Logging & PII)
+  - SaiHoaiNam: M2 (Tracing & Prompt Version)
+  - namph: M3 (Dashboard, SLO & Alert)
+  - haidn: M4 (Incident, Report & Demo)
 
 ## 2. Kết quả kỹ thuật
 
