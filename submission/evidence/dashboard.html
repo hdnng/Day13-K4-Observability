@@ -1,0 +1,560 @@
+<title>Day 13 AI Observability</title>
+<style>
+  /* Zinc-toned neutrals (shadcn-style), validated categorical hues from the
+     dataviz reference palette re-checked against these surfaces. */
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #ffffff;
+    --page-plane:     #f7f7f8;
+    --text-primary:   #09090b;
+    --text-secondary: #52525b;
+    --text-muted:     #71717a;
+    --grid:           #ececee;
+    --border:         rgba(9,9,11,0.09);
+    --shadow:         0 1px 2px rgba(9,9,11,0.04), 0 1px 12px rgba(9,9,11,0.04);
+    --series-1:       #2a78d6; /* blue - latency */
+    --series-2:       #eb6834; /* orange - cost */
+    --series-3:       #1baf7a; /* aqua - traffic */
+    --series-4:       #eda100; /* yellow - tokens */
+    --status-good:      #0ca30c;
+    --status-warning:   #fab219;
+    --status-serious:   #ec835a;
+    --status-critical:  #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #18181b;
+      --page-plane:     #09090b;
+      --text-primary:   #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted:     #71717a;
+      --grid:           #27272a;
+      --border:         rgba(250,250,250,0.09);
+      --shadow:         0 1px 2px rgba(0,0,0,0.4), 0 4px 24px rgba(0,0,0,0.28);
+      --series-1:       #3987e5;
+      --series-2:       #d95926;
+      --series-3:       #199e70;
+      --series-4:       #c98500;
+      --status-good:      #0ca30c;
+      --status-warning:   #fab219;
+      --status-serious:   #ec835a;
+      --status-critical:  #e66767;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1:      #18181b;
+    --page-plane:     #09090b;
+    --text-primary:   #fafafa;
+    --text-secondary: #a1a1aa;
+    --text-muted:     #71717a;
+    --grid:           #27272a;
+    --border:         rgba(250,250,250,0.09);
+    --shadow:         0 1px 2px rgba(0,0,0,0.4), 0 4px 24px rgba(0,0,0,0.28);
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-3:       #199e70;
+    --series-4:       #c98500;
+    --status-good:      #0ca30c;
+    --status-warning:   #fab219;
+    --status-serious:   #ec835a;
+    --status-critical:  #e66767;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  /* `color` is declared here, inside the .viz-root scope where the custom
+     properties live, so var(--text-primary) actually resolves — a value set
+     on body (an ancestor of .viz-root) can never read a variable defined
+     lower in the tree. */
+  .viz-root {
+    background: var(--page-plane);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 40px clamp(16px, 4vw, 56px) 72px;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+  .topbar h1 { font-size: 20px; font-weight: 600; margin: 0 0 5px; letter-spacing: -0.01em; color: var(--text-primary); }
+  .topbar .sub { color: var(--text-secondary); font-size: 13px; margin: 0; }
+  .meta-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12.5px; color: var(--text-secondary);
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 12px;
+  }
+  .pill b { color: var(--text-primary); font-weight: 600; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--status-good); display: inline-block; }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .stat-label {
+    font-size: 12.5px; color: var(--text-secondary); font-weight: 500;
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px;
+  }
+  .status-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 650; letter-spacing: 0.02em;
+    padding: 3px 8px; border-radius: 999px;
+    text-transform: uppercase;
+  }
+  .status-chip.good { color: var(--status-good); background: color-mix(in srgb, var(--status-good) 15%, transparent); }
+  .status-chip.critical { color: var(--status-critical); background: color-mix(in srgb, var(--status-critical) 15%, transparent); }
+  .status-chip .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .stat-value {
+    font-size: 28px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15;
+    font-variant-numeric: proportional-nums;
+    color: var(--text-primary);
+  }
+  .stat-value .unit { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-left: 4px; }
+  .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 9px; line-height: 1.5; }
+  .stat-sub b { color: var(--text-secondary); font-weight: 600; }
+
+  .meter-track {
+    margin-top: 13px;
+    height: 6px; border-radius: 999px;
+    background: var(--grid);
+    position: relative;
+    overflow: visible;
+  }
+  .meter-fill { height: 100%; border-radius: 999px; }
+  .meter-fill.good { background: var(--status-good); }
+  .meter-fill.critical { background: var(--status-critical); }
+  .meter-threshold {
+    position: absolute; top: -3px; bottom: -3px; width: 2px;
+    background: var(--text-primary); opacity: 0.3;
+  }
+
+  .panels-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 1100px) { .panels-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 640px) { .panels-grid { grid-template-columns: 1fr; } }
+
+  .panel-title {
+    font-size: 14px; font-weight: 650; margin: 0 0 3px;
+    color: var(--text-primary);
+  }
+  .panel-caption { font-size: 12px; color: var(--text-muted); margin: 0 0 16px; line-height: 1.5; }
+
+  .legend-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-key { width: 14px; height: 2px; border-radius: 1px; display: inline-block; }
+  .legend-key.dot-key { width: 8px; height: 8px; border-radius: 50%; }
+
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .axis-label { font-size: 10.5px; fill: var(--text-muted); font-family: inherit; }
+  .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .threshold-line { stroke: var(--status-critical); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .threshold-label { font-size: 10px; fill: var(--status-critical); font-weight: 600; font-family: inherit; }
+
+  .hover-target { fill: transparent; }
+  .hover-target:hover ~ .hover-dot,
+  .dot-wrap:hover .hover-dot { opacity: 1; }
+
+  .incident-chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .incident-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; color: var(--status-serious);
+    background: color-mix(in srgb, var(--status-serious) 12%, transparent);
+    border-radius: 999px; padding: 3px 9px;
+  }
+  .incident-chip .chip-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data-table th {
+    text-align: left; font-weight: 600; color: var(--text-secondary);
+    font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.02em;
+    padding: 9px 10px; border-bottom: 1px solid var(--grid);
+  }
+  table.data-table td {
+    padding: 10px 10px; border-bottom: 1px solid var(--grid);
+    color: var(--text-primary); font-variant-numeric: tabular-nums;
+  }
+  table.data-table tr:last-child td { border-bottom: none; }
+  .err-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--status-critical); font-weight: 600;
+  }
+  .err-badge .chip-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .table-toggle {
+    font-size: 12.5px; font-weight: 500; color: var(--text-secondary);
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 12px; cursor: pointer; font-family: inherit;
+    box-shadow: var(--shadow);
+  }
+  .table-toggle:hover { color: var(--text-primary); border-color: var(--text-muted); }
+  .table-view { margin-top: 14px; display: none; }
+  .table-view.open { display: block; }
+
+  .footer-note { font-size: 11.5px; color: var(--text-muted); margin-top: 24px; line-height: 1.7; }
+  .footer-note code {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 5px; font-size: 11px; color: var(--text-secondary);
+  }
+
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 10;
+    background: var(--text-primary); color: var(--page-plane);
+    font-size: 11.5px; padding: 6px 9px; border-radius: 8px;
+    line-height: 1.5; white-space: nowrap; opacity: 0; transition: opacity 0.1s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.24);
+  }
+  .tooltip.show { opacity: 1; }
+  .tooltip .t-val { font-weight: 650; font-variant-numeric: tabular-nums; }
+</style>
+
+<div class="viz-root">
+  <div class="topbar">
+    <div>
+      <h1>Day 13 AI Observability</h1>
+      <p class="sub">Nguồn: <code style="font-size:12px">data/logs.jsonl</code> &middot; Contract: <code style="font-size:12px">config/dashboard.yaml</code></p>
+    </div>
+    <div class="meta-row">
+      <span class="pill"><span class="dot"></span> Time range <b>60 phút</b></span>
+      <span class="pill">Refresh <b>30s</b></span>
+      <span class="pill">Requests <b id="meta-total">—</b></span>
+    </div>
+  </div>
+
+  <!-- KPI row: 6 stat tiles, one per required panel group -->
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- Latency, Traffic, Cost timelines — three separate single-axis charts,
+       never combined on one scale (see dataviz anti-patterns: dual-axis). -->
+  <div class="panels-grid">
+    <div class="card">
+      <p class="panel-title">Latency P50 / P95</p>
+      <p class="panel-caption">event = response_sent &middot; ms &middot; SLO P95 ≤ 3000ms</p>
+      <div class="legend-row">
+        <span class="legend-item"><span class="legend-key" style="background:var(--series-1)"></span>P50</span>
+        <span class="legend-item"><span class="legend-key" style="background:var(--text-muted)"></span>P95</span>
+        <span class="legend-item"><span class="legend-key" style="background:var(--status-critical);height:0;border-top:1.5px dashed var(--status-critical)"></span>Ngưỡng 3000ms</span>
+      </div>
+      <div id="latency-chart" style="position:relative"></div>
+    </div>
+    <div class="card">
+      <p class="panel-title">Traffic / phút</p>
+      <p class="panel-caption">event = request_received &middot; requests/phút</p>
+      <div class="legend-row">
+        <span class="legend-item"><span class="legend-key" style="background:var(--series-3)"></span>Traffic</span>
+      </div>
+      <div id="traffic-chart" style="position:relative"></div>
+    </div>
+    <div class="card">
+      <p class="panel-title">Cost / phút</p>
+      <p class="panel-caption">event = response_sent &middot; cost_usd &middot; ngưỡng tổng ≤ $2.5</p>
+      <div class="legend-row">
+        <span class="legend-item"><span class="legend-key" style="background:var(--series-2)"></span>Cost</span>
+      </div>
+      <div id="cost-chart" style="position:relative"></div>
+    </div>
+  </div>
+
+  <!-- Error breakdown -->
+  <div class="card" style="margin-bottom:12px">
+    <p class="panel-title">Error breakdown</p>
+    <p class="panel-caption">request_failed.error_type &middot; ngưỡng error_rate_pct ≤ 2%</p>
+    <table class="data-table" id="error-table">
+      <thead>
+        <tr><th>Error type</th><th>Count</th><th>% trong tổng request</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <button class="table-toggle" id="table-toggle-btn">Xem dạng bảng (accessibility)</button>
+  <div class="table-view card" id="table-view">
+    <table class="data-table" id="summary-table">
+      <thead><tr><th>Panel</th><th>Metric</th><th>Value</th><th>Threshold</th><th>Status</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <p class="footer-note">
+    Dữ liệu tổng hợp bằng <code>scripts/build_dashboard_data.py</code> từ <code>data/logs.jsonl</code> thật
+    (load test baseline + incident <code>rag_slow</code> + incident <code>tool_fail</code>).
+    Ngưỡng lấy từ <code>config/dashboard.yaml</code> / <code>config/slo.yaml</code>.
+  </p>
+
+  <div class="tooltip" id="tooltip"></div>
+</div>
+
+<script>
+(function () {
+  const DATA = {"generated_from": "data\logs.jsonl", "time_range_minutes": 60, "totals": {"requests_received": 87, "responses_sent": 75, "requests_failed": 12}, "panels": {"latency": {"unit": "ms", "p50": 150.0, "p95": 2651.0, "p99": 2651.0, "threshold_p95": 3000}, "traffic": {"unit": "requests_per_minute", "total": 87, "by_feature": {"summary": 14, "qa": 73}, "threshold_min_rate": 1}, "errors": {"unit": "percent", "error_rate_pct": 13.79, "total_failed": 12, "total_requests": 87, "breakdown": {"RuntimeError": 12}, "threshold": 2}, "cost": {"unit": "usd", "total": 0.1501, "avg": 0.002001, "threshold_total": 2.5}, "tokens": {"unit": "tokens", "tokens_in_total": 2461, "tokens_out_total": 9515, "total": 11976, "threshold_total": 50000}, "quality": {"unit": "score_0_to_1", "avg": 0.876, "min": 0.8, "max": 0.9, "threshold_min": 0.75}}, "timeline": [{"minute": "2026-08-11T10:00", "traffic": 6, "cost_usd": 0.0106, "latency_p50": 150.0, "latency_p95": 153.0}, {"minute": "2026-08-11T10:01", "traffic": 14, "cost_usd": 0.027, "latency_p50": 150.0, "latency_p95": 150.0}, {"minute": "2026-08-11T10:02", "traffic": 9, "cost_usd": 0.0185, "latency_p50": 150.0, "latency_p95": 150.0}, {"minute": "2026-08-11T10:03", "traffic": 8, "cost_usd": 0.0163, "latency_p50": 2651.0, "latency_p95": 2651.0}, {"minute": "2026-08-11T10:04", "traffic": 11, "cost_usd": 0.0226, "latency_p50": 150.0, "latency_p95": 153.0}, {"minute": "2026-08-11T10:05", "traffic": 12, "cost_usd": 0.0, "latency_p50": null, "latency_p95": null}, {"minute": "2026-08-11T10:06", "traffic": 17, "cost_usd": 0.0343, "latency_p50": 150.0, "latency_p95": 151.0}, {"minute": "2026-08-11T10:07", "traffic": 10, "cost_usd": 0.0208, "latency_p50": 150.0, "latency_p95": 150.0}], "incidents": [{"scenario": "rag_slow", "start_minute": "2026-08-11T10:02", "end_minute": "2026-08-11T10:03"}, {"scenario": "tool_fail", "start_minute": "2026-08-11T10:04", "end_minute": "2026-08-11T10:05"}]};
+
+  const root = document.currentScript.closest('.viz-root') || document.querySelector('.viz-root');
+  const tooltip = document.getElementById('tooltip');
+
+  function fmt(n, opts) {
+    opts = opts || {};
+    if (n === null || n === undefined) return '—';
+    if (opts.compact) {
+      if (Math.abs(n) >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    }
+    if (opts.decimals !== undefined) return n.toLocaleString('en-US', { minimumFractionDigits: opts.decimals, maximumFractionDigits: opts.decimals });
+    return n.toLocaleString('en-US');
+  }
+
+  document.getElementById('meta-total').textContent = DATA.totals.requests_received;
+
+  // ---------- KPI tiles ----------
+  const p = DATA.panels;
+  const tiles = [
+    {
+      key: 'latency', label: 'Latency P95', value: p.latency.p95, unit: 'ms',
+      threshold: p.latency.threshold_p95, direction: 'lte',
+      sub: `P50 <b>${fmt(p.latency.p50)}ms</b> &middot; P99 <b>${fmt(p.latency.p99)}ms</b>`,
+    },
+    {
+      key: 'traffic', label: 'Traffic', value: p.traffic.total, unit: 'req',
+      threshold: null, direction: null,
+      sub: Object.entries(p.traffic.by_feature).map(([k, v]) => `<b>${v}</b> ${k}`).join(' &middot; '),
+    },
+    {
+      key: 'errors', label: 'Error rate', value: p.errors.error_rate_pct, unit: '%',
+      threshold: p.errors.threshold, direction: 'lte',
+      sub: `<b>${p.errors.total_failed}</b> / ${p.errors.total_requests} request lỗi`,
+    },
+    {
+      key: 'cost', label: 'Total cost', value: p.cost.total, unit: 'usd', prefix: '$',
+      threshold: p.cost.threshold_total, direction: 'lte',
+      sub: `Trung bình <b>$${fmt(p.cost.avg, { decimals: 6 })}</b> / request`,
+    },
+    {
+      key: 'tokens', label: 'Tokens (in+out)', value: p.tokens.total, unit: 'tok',
+      threshold: p.tokens.threshold_total, direction: 'lte', compact: true,
+      sub: `In <b>${fmt(p.tokens.tokens_in_total)}</b> &middot; Out <b>${fmt(p.tokens.tokens_out_total)}</b>`,
+    },
+    {
+      key: 'quality', label: 'Quality avg', value: p.quality.avg, unit: '/1',
+      threshold: p.quality.threshold_min, direction: 'gte',
+      sub: `Min <b>${fmt(p.quality.min, { decimals: 2 })}</b> &middot; Max <b>${fmt(p.quality.max, { decimals: 2 })}</b>`,
+    },
+  ];
+
+  const grid = document.getElementById('kpi-grid');
+  tiles.forEach((t) => {
+    let ok = true;
+    if (t.threshold !== null) {
+      ok = t.direction === 'lte' ? t.value <= t.threshold : t.value >= t.threshold;
+    }
+    const statusClass = ok ? 'good' : 'critical';
+    const statusText = t.threshold === null ? '' : (ok ? 'OK' : 'Vượt ngưỡng');
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    const valueDisplay = t.compact ? fmt(t.value, { compact: true }) :
+      (t.key === 'cost' ? fmt(t.value, { decimals: 4 }) :
+       t.key === 'quality' ? fmt(t.value, { decimals: 2 }) :
+       fmt(t.value));
+
+    card.innerHTML = `
+      <div class="stat-label">
+        <span>${t.label}</span>
+        ${statusText ? `<span class="status-chip ${statusClass}"><span class="chip-dot"></span>${statusText}</span>` : ''}
+      </div>
+      <div class="stat-value">${t.prefix || ''}${valueDisplay}<span class="unit">${t.unit}</span></div>
+      <div class="stat-sub">${t.sub}</div>
+      ${t.threshold !== null ? `
+        <div class="meter-track">
+          <div class="meter-fill ${statusClass}" style="width:${Math.min(100, (t.value / (t.threshold * 1.4)) * 100)}%"></div>
+          <div class="meter-threshold" style="left:${Math.min(100, (t.threshold / (t.threshold * 1.4)) * 100)}%"></div>
+        </div>
+        <div class="stat-sub" style="margin-top:6px">Ngưỡng ${t.direction === 'lte' ? '≤' : '≥'} ${t.prefix || ''}${fmt(t.threshold)}${t.unit}</div>
+      ` : ''}
+    `;
+    grid.appendChild(card);
+  });
+
+  function fmtAxisValue(val, decimals) {
+    if (decimals) return val.toFixed(decimals);
+    if (Math.abs(val) >= 1000) return (val / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return Math.round(val).toString();
+  }
+
+  // ---------- Line chart helper (latency / traffic / cost) ----------
+  function buildLineChart(containerId, timeline, series, opts) {
+    const container = document.getElementById(containerId);
+    const W = 340, H = 200, padL = opts.decimals ? 40 : 34, padR = 12, padT = 12, padB = 28;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+
+    const allVals = timeline.flatMap((d) => series.map((s) => d[s.key]).filter((v) => v !== null && v !== undefined));
+    let maxV = Math.max(...allVals, opts.thresholdValue || 0) * 1.15;
+    if (!isFinite(maxV) || maxV === 0) maxV = 1;
+
+    const x = (i) => padL + (timeline.length <= 1 ? plotW / 2 : (i / (timeline.length - 1)) * plotW);
+    const y = (v) => padT + plotH - (v / maxV) * plotH;
+
+    const gridLines = [0, 0.25, 0.5, 0.75, 1].map((f) => {
+      const yy = padT + plotH * (1 - f);
+      const val = maxV * f;
+      return `<line class="grid-line" x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" />
+        <text class="axis-label" x="${padL - 8}" y="${yy + 3}" text-anchor="end">${fmtAxisValue(val, opts.decimals)}</text>`;
+    }).join('');
+
+    const xLabels = timeline.map((d, i) => {
+      if (timeline.length > 1 && i % Math.ceil(timeline.length / 6) !== 0 && i !== timeline.length - 1) return '';
+      const t = d.minute.slice(11);
+      return `<text class="axis-label" x="${x(i)}" y="${H - 6}" text-anchor="middle">${t}</text>`;
+    }).join('');
+
+    let thresholdSvg = '';
+    if (opts.thresholdValue) {
+      const ty = y(opts.thresholdValue);
+      thresholdSvg = `<line class="threshold-line" x1="${padL}" x2="${W - padR}" y1="${ty}" y2="${ty}" />
+        <text class="threshold-label" x="${W - padR}" y="${ty - 4}" text-anchor="end">${opts.thresholdLabel || ''}</text>`;
+    }
+
+    // Incident bands — shade the minute(s) a practice incident was active so
+    // an anomaly (a latency spike, a cost/traffic gap) reads as "caused by
+    // X" instead of an unexplained blip.
+    let incidentSvg = '';
+    if (opts.incidents && opts.incidents.length) {
+      const idxOf = new Map(timeline.map((d, i) => [d.minute, i]));
+      const half = timeline.length > 1 ? (plotW / (timeline.length - 1)) / 2 : 14;
+      incidentSvg = opts.incidents.map((inc) => {
+        const startIdx = idxOf.get(inc.start_minute);
+        if (startIdx === undefined) return '';
+        const endIdx = inc.end_minute && idxOf.has(inc.end_minute) ? idxOf.get(inc.end_minute) : startIdx;
+        const bx1 = x(startIdx) - half, bx2 = x(endIdx) + half;
+        return `<rect x="${bx1.toFixed(1)}" y="${padT}" width="${(bx2 - bx1).toFixed(1)}" height="${plotH}"
+          fill="var(--status-serious)" opacity="0.12" />`;
+      }).join('');
+    }
+
+    const seriesSvg = series.map((s) => {
+      const pts = timeline.map((d, i) => ({ x: x(i), y: d[s.key] !== null && d[s.key] !== undefined ? y(d[s.key]) : null, v: d[s.key], i }))
+        .filter((pt) => pt.y !== null);
+      if (pts.length === 0) return '';
+      const path = pts.map((pt, idx) => `${idx === 0 ? 'M' : 'L'}${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(' ');
+      const dots = pts.map((pt) => `
+        <circle class="dot-wrap" cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="10" fill="transparent"
+          data-series="${s.label}" data-value="${pt.v}" data-unit="${opts.unit || ''}" data-minute="${timeline[pt.i].minute}" />
+        <circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="4" fill="${s.color}" stroke="var(--surface-1)" stroke-width="2" />
+      `).join('');
+      return `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />${dots}`;
+    }).join('');
+
+    container.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${opts.ariaLabel || ''}">
+      ${gridLines}${incidentSvg}${thresholdSvg}${seriesSvg}${xLabels}
+    </svg>`;
+
+    container.querySelectorAll('circle.dot-wrap').forEach((el) => {
+      el.addEventListener('pointermove', (e) => showTooltip(e, el));
+      el.addEventListener('pointerleave', hideTooltip);
+      el.addEventListener('focus', (e) => showTooltip(e, el));
+      el.addEventListener('blur', hideTooltip);
+    });
+
+    // Incident chip row under the chart — the readable label; the SVG band
+    // is the visual pointer, this is the actual accessible text.
+    if (opts.incidents && opts.incidents.length) {
+      const chipRow = document.createElement('div');
+      chipRow.className = 'incident-chip-row';
+      chipRow.innerHTML = opts.incidents.map((inc) => `
+        <span class="incident-chip">
+          <span class="chip-dot"></span>${inc.scenario} · ${inc.start_minute.slice(11)}${inc.end_minute ? '–' + inc.end_minute.slice(11) : ''}
+        </span>
+      `).join('');
+      container.after(chipRow);
+    }
+  }
+
+  function showTooltip(e, el) {
+    const series = el.getAttribute('data-series');
+    const value = el.getAttribute('data-value');
+    const unit = el.getAttribute('data-unit');
+    const minute = el.getAttribute('data-minute').slice(11);
+    tooltip.innerHTML = `<div>${minute}</div><div>${series}: <span class="t-val">${Number(value).toLocaleString()}${unit}</span></div>`;
+    const rect = root.getBoundingClientRect();
+    const evt = e.touches ? e.touches[0] : e;
+    tooltip.style.left = (evt.clientX - rect.left + 14) + 'px';
+    tooltip.style.top = (evt.clientY - rect.top - 8) + 'px';
+    tooltip.classList.add('show');
+  }
+  function hideTooltip() { tooltip.classList.remove('show'); }
+
+  const incidents = DATA.incidents || [];
+
+  buildLineChart('latency-chart', DATA.timeline, [
+    { key: 'latency_p50', label: 'P50', color: 'var(--series-1)' },
+    { key: 'latency_p95', label: 'P95', color: 'var(--text-muted)' },
+  ], { unit: 'ms', thresholdValue: p.latency.threshold_p95, thresholdLabel: 'SLO 3000ms', ariaLabel: 'Latency P50 and P95 over time', incidents });
+
+  buildLineChart('traffic-chart', DATA.timeline, [
+    { key: 'traffic', label: 'Traffic', color: 'var(--series-3)' },
+  ], { unit: ' req', ariaLabel: 'Traffic per minute', incidents });
+
+  buildLineChart('cost-chart', DATA.timeline, [
+    { key: 'cost_usd', label: 'Cost', color: 'var(--series-2)' },
+  ], { unit: ' usd', decimals: 4, ariaLabel: 'Cost per minute', incidents });
+
+  // ---------- Error table ----------
+  const errBody = document.querySelector('#error-table tbody');
+  const errEntries = Object.entries(p.errors.breakdown);
+  if (errEntries.length === 0) {
+    errBody.innerHTML = `<tr><td colspan="3" style="color:var(--text-muted)">Không có lỗi trong cửa sổ hiện tại</td></tr>`;
+  } else {
+    errEntries.forEach(([type, count]) => {
+      const pct = ((count / p.errors.total_requests) * 100).toFixed(1);
+      const row = document.createElement('tr');
+      row.innerHTML = `<td><span class="err-badge"><span class="chip-dot"></span>${type}</span></td><td>${count}</td><td>${pct}%</td>`;
+      errBody.appendChild(row);
+    });
+  }
+
+  // ---------- Table view (accessibility twin) ----------
+  const summaryBody = document.querySelector('#summary-table tbody');
+  const summaryRows = [
+    ['Latency', 'P50', `${fmt(p.latency.p50)} ms`, '—', '—'],
+    ['Latency', 'P95', `${fmt(p.latency.p95)} ms`, `≤ ${p.latency.threshold_p95} ms`, p.latency.p95 <= p.latency.threshold_p95 ? 'OK' : 'Vượt ngưỡng'],
+    ['Latency', 'P99', `${fmt(p.latency.p99)} ms`, '—', '—'],
+    ['Traffic', 'Total requests', `${p.traffic.total}`, '—', '—'],
+    ['Errors', 'Error rate', `${p.errors.error_rate_pct}%`, `≤ ${p.errors.threshold}%`, p.errors.error_rate_pct <= p.errors.threshold ? 'OK' : 'Vượt ngưỡng'],
+    ['Cost', 'Total cost', `$${fmt(p.cost.total, { decimals: 4 })}`, `≤ $${p.cost.threshold_total}`, p.cost.total <= p.cost.threshold_total ? 'OK' : 'Vượt ngưỡng'],
+    ['Tokens', 'Total tokens', `${fmt(p.tokens.total)}`, `≤ ${fmt(p.tokens.threshold_total)}`, p.tokens.total <= p.tokens.threshold_total ? 'OK' : 'Vượt ngưỡng'],
+    ['Quality', 'Average score', `${fmt(p.quality.avg, { decimals: 2 })}`, `≥ ${p.quality.threshold_min}`, p.quality.avg >= p.quality.threshold_min ? 'OK' : 'Vượt ngưỡng'],
+  ];
+  summaryRows.forEach((r) => {
+    const row = document.createElement('tr');
+    row.innerHTML = r.map((c) => `<td>${c}</td>`).join('');
+    summaryBody.appendChild(row);
+  });
+
+  document.getElementById('table-toggle-btn').addEventListener('click', () => {
+    const tv = document.getElementById('table-view');
+    tv.classList.toggle('open');
+  });
+})();
+</script>
