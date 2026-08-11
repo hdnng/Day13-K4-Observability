@@ -10,7 +10,9 @@ CORPUS = {
     "policy": ["Do not expose PII in logs. Use sanitized summaries only."],
 }
 
+from app.tracing import observe
 
+@observe()
 def retrieve(message: str) -> list[str]:
     if STATE["tool_fail"]:
         raise RuntimeError("Vector store timeout")
