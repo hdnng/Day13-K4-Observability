@@ -9,7 +9,8 @@
 
 ## 2. Kết quả kỹ thuật
 
-- Điểm `validate_logs.py` (baseline CP0): 30/100 — xem `submission/evidence/cp0_baseline.txt` (sẽ cập nhật điểm cuối sau CP1)
+- Điểm `validate_logs.py` (baseline CP0): 30/100 — xem `submission/evidence/cp0_baseline.txt`
+- Điểm `validate_logs.py` (sau CP1 — M1 hoàn thiện logging/PII): **100/100** — xem `submission/evidence/cp1_validate_logs.txt`
 - Điểm `validate_dashboard.py` (baseline CP0): HỢP LỆ 6/6 panel (contract check, chưa phải ảnh dashboard runtime)
 - `python -m pytest -q` (baseline CP0): 22 passed
 - Tổng số traces:
@@ -18,10 +19,10 @@
 
 ## 3. Logging và tracing
 
-- Evidence correlation ID:
-- Evidence PII redaction:
-- Evidence trace waterfall:
-- Giải thích một span đáng chú ý:
+- Evidence correlation ID: mỗi request sinh `correlation_id` dạng `req-<8-hex>` trong `app/middleware.py` (ưu tiên header `x-request-id` nếu client gửi sẵn), bind vào structlog contextvars nên xuất hiện xuyên suốt `request_received` → `response_sent` cùng một request, và trả lại qua response header `x-request-id`. Xem `submission/evidence/cp1_sample_logs.jsonl` (2 request mẫu, mỗi request 2 dòng log cùng `correlation_id`, ví dụ `req-c78907c1`).
+- Evidence PII redaction: `app/pii.py` che email/SĐT VN/CCCD/thẻ tín dụng (+ passport, địa chỉ VN) qua `scrub_text`; processor `scrub_event` được đăng ký trong `app/logging_config.py` để scrub trước khi JSON được render/ghi file. Dòng đầu `cp1_sample_logs.jsonl` cho thấy `"My email is [REDACTED_EMAIL]"` thay vì email thật.
+- Evidence trace waterfall: (thuộc phần M2 — chưa điền, chờ bàn giao)
+- Giải thích một span đáng chú ý: (thuộc phần M2 — chưa điền)
 
 ## 4. Prompt versioning
 
