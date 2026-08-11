@@ -72,6 +72,13 @@ class LabAgent:
             cost_details={"total": cost_usd},
             prompt=prompt.managed_prompt,
         )
+        trace_id = getattr(langfuse_client, "get_current_trace_id", lambda: None)()
+        if trace_id:
+            print(f"langfuse_trace_id={trace_id}")
+
+        flush = getattr(langfuse_client, "flush", None)
+        if callable(flush):
+            flush()
 
         metrics.record_request(
             latency_ms=latency_ms,

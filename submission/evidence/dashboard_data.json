@@ -1,0 +1,127 @@
+{
+  "generated_from": "data\\logs.jsonl",
+  "time_range_minutes": 60,
+  "totals": {
+    "requests_received": 87,
+    "responses_sent": 75,
+    "requests_failed": 12
+  },
+  "panels": {
+    "latency": {
+      "unit": "ms",
+      "p50": 150.0,
+      "p95": 2651.0,
+      "p99": 2651.0,
+      "threshold_p95": 3000
+    },
+    "traffic": {
+      "unit": "requests_per_minute",
+      "total": 87,
+      "by_feature": {
+        "summary": 14,
+        "qa": 73
+      },
+      "threshold_min_rate": 1
+    },
+    "errors": {
+      "unit": "percent",
+      "error_rate_pct": 13.79,
+      "total_failed": 12,
+      "total_requests": 87,
+      "breakdown": {
+        "RuntimeError": 12
+      },
+      "threshold": 2
+    },
+    "cost": {
+      "unit": "usd",
+      "total": 0.1501,
+      "avg": 0.002001,
+      "threshold_total": 2.5
+    },
+    "tokens": {
+      "unit": "tokens",
+      "tokens_in_total": 2461,
+      "tokens_out_total": 9515,
+      "total": 11976,
+      "threshold_total": 50000
+    },
+    "quality": {
+      "unit": "score_0_to_1",
+      "avg": 0.876,
+      "min": 0.8,
+      "max": 0.9,
+      "threshold_min": 0.75
+    }
+  },
+  "timeline": [
+    {
+      "minute": "2026-08-11T10:00",
+      "traffic": 6,
+      "cost_usd": 0.0106,
+      "latency_p50": 150.0,
+      "latency_p95": 153.0
+    },
+    {
+      "minute": "2026-08-11T10:01",
+      "traffic": 14,
+      "cost_usd": 0.027,
+      "latency_p50": 150.0,
+      "latency_p95": 150.0
+    },
+    {
+      "minute": "2026-08-11T10:02",
+      "traffic": 9,
+      "cost_usd": 0.0185,
+      "latency_p50": 150.0,
+      "latency_p95": 150.0
+    },
+    {
+      "minute": "2026-08-11T10:03",
+      "traffic": 8,
+      "cost_usd": 0.0163,
+      "latency_p50": 2651.0,
+      "latency_p95": 2651.0
+    },
+    {
+      "minute": "2026-08-11T10:04",
+      "traffic": 11,
+      "cost_usd": 0.0226,
+      "latency_p50": 150.0,
+      "latency_p95": 153.0
+    },
+    {
+      "minute": "2026-08-11T10:05",
+      "traffic": 12,
+      "cost_usd": 0.0,
+      "latency_p50": null,
+      "latency_p95": null
+    },
+    {
+      "minute": "2026-08-11T10:06",
+      "traffic": 17,
+      "cost_usd": 0.0343,
+      "latency_p50": 150.0,
+      "latency_p95": 151.0
+    },
+    {
+      "minute": "2026-08-11T10:07",
+      "traffic": 10,
+      "cost_usd": 0.0208,
+      "latency_p50": 150.0,
+      "latency_p95": 150.0
+    }
+  ],
+  "incidents": [
+    {
+      "scenario": "rag_slow",
+      "start_minute": "2026-08-11T10:02",
+      "end_minute": "2026-08-11T10:03"
+    },
+    {
+      "scenario": "tool_fail",
+      "start_minute": "2026-08-11T10:04",
+      "end_minute": "2026-08-11T10:05"
+    }
+  ]
+}

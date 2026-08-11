@@ -4,13 +4,24 @@ slis:
   latency_p95_ms:
     objective: 3000
     target: 99.5
-    note: Replace with your group's target
+    note: >-
+      P95 duoi 3s cho 99.5% request trong 28 ngay. Giu nguyen default vi
+      mock LLM baseline ~150ms; 3000ms du bien do cho spike thuc te (vd.
+      RAG cham) ma van bat duoc bat thuong ro rang khi vuot.
   error_rate_pct:
     objective: 2
     target: 99.0
+    note: >-
+      Error rate duoi 2% cho 99% cua so 5 phut. Khop voi nguong panel
+      Error trong config/dashboard.yaml.
   daily_cost_usd:
     objective: 2.5
     target: 100.0
+    note: >-
+      Ngan sach $2.5/ngay cho practice load (mock LLM, chi phi thap).
+      Vuot nguong bao hieu retry loop hoac cost_spike incident.
   quality_score_avg:
     objective: 0.75
     target: 95.0
+    note: >-
+      Quality proxy trung binh toi thieu 0.75/1 cho 95% cua so danh gia.
