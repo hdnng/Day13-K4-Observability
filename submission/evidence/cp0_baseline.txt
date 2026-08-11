@@ -1,0 +1,55 @@
+Checkpoint 0 — Setup & Baseline
+Role: Thành viên 3 (M3 — Dashboard, SLO & Alert)
+Branch: CP0/namph
+Date: 2026-08-11
+
+## Environment
+- Python: 3.12 (venv at .venv, created with `py -3.12 -m venv .venv`)
+  Note: system default `python` resolved to 3.14, which fails to build
+  pydantic-core==2.33.2 (PyO3 wheel not yet available for 3.14). Used 3.12 instead.
+- Dependencies installed via `pip install -r requirements.txt` — success.
+- `.env` created from `.env.example`. LANGFUSE_* keys left blank for now
+  (no shared/cloud key configured yet) — app falls back to local prompt.
+
+## /health check
+GET http://127.0.0.1:8000/health
+{
+  "ok": true,
+  "tracing_enabled": false,
+  "incidents": {
+    "rag_slow": false,
+    "tool_fail": false,
+    "cost_spike": false
+  }
+}
+
+## Load test
+`python scripts/load_test.py` — 10 requests, all HTTP 200.
+correlation_id shows "MISSING" for all requests (expected pre-CP1;
+middleware TODOs not yet implemented).
+`data/logs.jsonl` generated successfully (21 records incl. app_started).
+
+## validate_logs.py baseline (M1 will drive improvement in CP1)
+Total log records analyzed: 21
+Records with missing required fields: 20
+Records with missing enrichment (context): 20
+Unique correlation IDs found: 0
+Potential PII leaks detected: 0
+Scorecard:
+- [FAILED] Missing required fields (ts, level, etc.)
+- [FAILED] Correlation ID propagation (less than 2 unique IDs)
+- [FAILED] Log enrichment (missing user_id_hash, etc.)
++ [PASSED] PII scrubbing
+Estimated Score: 30/100
+
+## validate_dashboard.py (M3 task — dashboard contract check)
+HỢP LỆ: 6/6 panel có trong dashboard contract.
+(config/dashboard.yaml already defines all 6 required panel groups:
+latency, traffic, error, cost, tokens, quality — contract-valid at CP0.
+Runtime dashboard screenshots still required at CP2.)
+
+## pytest baseline
+22 passed, 2 warnings (FastAPI on_event deprecation warnings only) in 3.33s
+
+## No secrets committed
+.gitignore already excludes .venv/, .env, data/logs.jsonl, data/audit.jsonl.
