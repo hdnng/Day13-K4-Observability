@@ -4,7 +4,7 @@
 
 - Tên nhóm: konichiwa
 - Repository URL: https://github.com/hdnng/Day13-K4-Observability
-- Commit SHA cuối: `c8361c65dfe5de4fa33f32911ccea0b4cbb74c9c`
+- Commit SHA cuối: `77e8fe1ab1fef86be73a6fbf0d2562dc8e120803`
 - Thành viên và vai trò:
   - Trần Duy Sơn - 2A202601792: M1 (Logging & PII)
   - Sái Hoài Nam - 2A202601993: M2 (Tracing & Prompt Version)
@@ -65,4 +65,4 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 | Trần Duy Sơn - 2A202601792 - Son (M1 — Logging & PII) | CP0: Lưu điểm baseline 30/100 vào REPORT.md. <br>CP1: Hoàn thiện logic logging & PII redaction (ẩn email, sđt, CCCD). <br>CP2 (Hỗ trợ): Xác nhận log format khớp với yêu cầu cấu hình Dashboard của M3. | PR #3 (`CP0/Son`)<br>PR #4 (`CP1/Son`)<br>PR #11 (`CP2/Son`) | Cấu hình structlog cần chú ý thứ tự processor để lọc đúng dữ liệu. Contract rõ ràng giúp các role làm việc độc lập. |
 | Sái Hoài Nam - 2A202601993 - SaiHoaiNam (M2 — Tracing & Prompt) | CP1: Nghiên cứu cấu trúc code, hoàn thành tìm hiểu về Langfuse SDK (checkpoint 1). <br>CP2: Gắn Langfuse tracing vào API, thiết lập các phiên bản prompt (v1, v2) và tạo ảnh waterfall trace làm bằng chứng. | PR #5 (`CP1/SaiHoaiNam`)<br>PR #8 (`cp2/Nam`) | Thấy rõ sức mạnh của trace waterfall trong việc hiển thị chi tiết thời gian chạy của từng span con. |
 | Phạm Hoàng Nam - 2A202601442 - namph (M3 — Dashboard, SLO & Alert) | CP0: Setup venv, bắt baseline `validate_logs` & `validate_dashboard`. <br>CP1 (Hỗ trợ): Nghiên cứu cấu trúc log từ M1 để chuẩn bị build dashboard. <br>CP2: Hoàn thiện `build_dashboard_data.py`, dựng file HTML dashboard, lập SLO và bộ 3 Alert rules. | PR #2 (`CP0/namph`)<br>PR #7 (`CP1/namph`)<br>PR #9 (`CP2/namph`) | Chạy incident thật trên hệ thống cho ra dữ liệu trực quan hơn nhiều so với load test bình thường để build dashboard. |
-| Dương Ngọc Hải - 2A202601748 - haidn (M4 — Incident & Report) | CP0: Khởi tạo khung evidence. <br>CP1 & CP2: Báo cáo bằng chứng từ các thành viên. <br>CP3 (Trưởng nhóm sự cố): Kích hoạt challenge `rag_slow`, bắn tải, gắn thêm `@observe` cho module RAG, trích xuất Trace ID/Correlation ID và tổng hợp root cause/fix action vào Báo cáo. | PR #1 (`CP0/haidn`)<br>PR #6 (`CP1/haidn`)<br>PR #10 (`CP2/haidn`)<br>Commit `9d11709` (`CP3/haidn`) | Hiểu được bức tranh toàn cảnh: Metrics dùng để báo động, Traces để khoanh vùng nút thắt, và Logs để tìm nguyên nhân gốc rễ. |
+| Dương Ngọc Hải - 2A202601748 - haidn (M4 — Incident & Report) | CP0: Khởi tạo khung evidence. <br>CP1 & CP2: Báo cáo bằng chứng từ các thành viên. <br>CP3 (Trưởng nhóm sự cố): Kích hoạt challenge `rag_slow`, bắn tải, gắn thêm `@observe` cho module RAG, trích xuất Trace ID/Correlation ID và tổng hợp root cause/fix action vào Báo cáo. | PR #1 (`CP0/haidn`)<br>PR #6 (`CP1/haidn`)<br>PR #10 (`CP2/haidn`)<br>PR #12 (`CP3/haidn`) | Hiểu được bức tranh toàn cảnh: Metrics dùng để báo động, Traces để khoanh vùng nút thắt, và Logs để tìm nguyên nhân gốc rễ. |
