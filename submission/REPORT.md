@@ -13,16 +13,16 @@
 - Điểm `validate_logs.py` (sau CP1 — M1 hoàn thiện logging/PII): **100/100** — xem `submission/evidence/cp1_validate_logs.txt`
 - Điểm `validate_dashboard.py` (baseline CP0): HỢP LỆ 6/6 panel (contract check, chưa phải ảnh dashboard runtime)
 - `python -m pytest -q` (baseline CP0): 22 passed
-- Tổng số traces:
+- Tổng số traces: > 10 (xem `submission/evidence/m2_10_traces_list.png`)
 - Số PII leak còn lại: 0
-- Link/đường dẫn dashboard:
+- Link/đường dẫn dashboard: `submission/evidence/dashboard.html`
 
 ## 3. Logging và tracing
 
 - Evidence correlation ID: mỗi request sinh `correlation_id` dạng `req-<8-hex>` trong `app/middleware.py` (ưu tiên header `x-request-id` nếu client gửi sẵn), bind vào structlog contextvars nên xuất hiện xuyên suốt `request_received` → `response_sent` cùng một request, và trả lại qua response header `x-request-id`. Xem `submission/evidence/cp1_sample_logs.jsonl` (2 request mẫu, mỗi request 2 dòng log cùng `correlation_id`, ví dụ `req-c78907c1`).
 - Evidence PII redaction: `app/pii.py` che email/SĐT VN/CCCD/thẻ tín dụng (+ passport, địa chỉ VN) qua `scrub_text`; processor `scrub_event` được đăng ký trong `app/logging_config.py` để scrub trước khi JSON được render/ghi file. Dòng đầu `cp1_sample_logs.jsonl` cho thấy `"My email is [REDACTED_EMAIL]"` thay vì email thật.
-- Evidence trace waterfall: (thuộc phần M2 — chưa điền, chờ bàn giao)
-- Giải thích một span đáng chú ý: (thuộc phần M2 — chưa điền)
+- Evidence trace waterfall: xem `submission/evidence/m2_trace_candidate_v2.png` và `submission/evidence/m2_trace_baseline_v1.png`
+- Giải thích một span đáng chú ý: Span `retrieve` (hoặc `generation`) trong trace waterfall cho phép xác định chính xác thời gian RAG hoặc gọi LLM mất bao lâu. Ví dụ, khi M3 bật incident `rag_slow`, span `retrieve` sẽ phình to rõ rệt (>2.5s), giúp khoanh vùng nguyên nhân sự cố nhanh chóng thay vì chỉ nhìn thấy tổng latency tăng.
 
 ## 4. Prompt versioning
 
