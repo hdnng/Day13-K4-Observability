@@ -9,7 +9,9 @@
 
 ## 2. Kết quả kỹ thuật
 
-- Điểm `validate_logs.py`:
+- Điểm `validate_logs.py` (baseline CP0): 30/100 — xem `submission/evidence/cp0_baseline.txt` (sẽ cập nhật điểm cuối sau CP1)
+- Điểm `validate_dashboard.py` (baseline CP0): HỢP LỆ 6/6 panel (contract check, chưa phải ảnh dashboard runtime)
+- `python -m pytest -q` (baseline CP0): 22 passed
 - Tổng số traces:
 - Số PII leak còn lại:
 - Link/đường dẫn dashboard:
@@ -52,4 +54,4 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 
 | Thành viên | Phần việc | Commit/PR | Điều đã học |
 |---|---|---|---|
-| | | | |
+| namph (M3 — Dashboard, SLO & Alert) | CP0: dựng venv (Python 3.12), cài dependencies, tạo `.env`, chạy API + load test, lấy baseline `validate_logs.py` (30/100) và `validate_dashboard.py` (6/6 panel hợp lệ), xác nhận `pytest` 22 passed | (branch `CP0/namph`) | Python 3.14 chưa có wheel cho `pydantic-core` (PyO3 giới hạn ≤3.13) nên phải dùng Python 3.12 cho venv |
