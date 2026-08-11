@@ -9,7 +9,7 @@
 
 ## 2. Kết quả kỹ thuật
 
-- Điểm `validate_logs.py`:
+- Điểm `validate_logs.py`: **Baseline (CP0, trước khi sửa TODO): 30/100** — đo lúc 2026-08-11, 21 log record, 0 correlation ID hợp lệ (toàn bộ `MISSING`), 20/20 record `service=api` thiếu enrichment (`user_id_hash`, `session_id`, `feature`, `model`), 0 PII leak (do `summarize_text` đã scrub message/answer preview trước khi log, dù processor `scrub_event` trong pipeline structlog chưa được đăng ký).
 - Tổng số traces:
 - Số PII leak còn lại:
 - Link/đường dẫn dashboard:
