@@ -44,13 +44,13 @@
 
 ## 6. Điều tra challenge
 
-- Challenge ID:
-- Triệu chứng từ metrics:
-- Trace ID liên quan:
-- Log line/correlation ID liên quan:
-- Root cause:
-- Fix action:
-- Preventive measure:
+- Challenge ID: `day13-k4-observability-v1`
+- Triệu chứng từ metrics: SLI `latency_p95_ms` bị phá vỡ, bảng dashboard hiển thị thời gian phản hồi API tăng đột biến vượt ngưỡng 2000ms (cụ thể lên tới ~2650ms).
+- Trace ID liên quan: *(Lọc trên giao diện Langfuse theo Correlation ID req-16f2fe26)*
+- Log line/correlation ID liên quan: `req-16f2fe26`
+- Root cause: Quá trình truy xuất dữ liệu từ Vector Store (span `retrieve` trong hệ thống RAG) bị thắt cổ chai, mất thời gian rất dài (2.5s) để phản hồi, kéo theo toàn bộ API bị chậm. (Mô phỏng lỗi do sự cố database thông qua kịch bản `rag_slow`).
+- Fix action: Nâng cấp cấu hình tài nguyên hoặc tối ưu hoá index của Vector Database. Khởi động lại service RAG nếu phát hiện bị treo.
+- Preventive measure: Thiết lập timeout cứng cho hàm `retrieve` (ví dụ: tối đa 1.5 giây). Nếu quá giờ sẽ trả về kết quả mặc định (fallback) để tránh treo toàn bộ request và làm nghẽn connection pool. Bổ sung alert rule cảnh báo riêng cho span `retrieve`.
 
 ## 7. Đóng góp cá nhân
 
@@ -62,3 +62,6 @@ Với mỗi thành viên, ghi rõ nhiệm vụ và link commit/PR tương ứng.
 | namph (M3 — Dashboard, SLO & Alert) | CP1 (hỗ trợ): nghiên cứu cấu trúc log thật sau khi M1 (Son) hoàn thiện CP1, ánh xạ field → 6 panel dashboard, ghi chú chuẩn bị cho CP2 | (branch `CP1/namph`) | Không đụng vào `app/` đang được người khác sửa; validator/log thật là nguồn xác nhận đáng tin hơn suy luận từ schema |
 | namph (M3 — Dashboard, SLO & Alert) | CP2: thêm `error_rate_pct` vào `app/metrics.py`; viết `scripts/build_dashboard_data.py` tổng hợp 6 panel từ `data/logs.jsonl`; dựng dashboard HTML (style Looker/shadcn, KPI tile + threshold meter + timeline chart + bảng error + table-view accessibility); điền `docs/dashboard-spec.md`, `config/slo.yaml`, `config/alert_rules.yaml`, `docs/alerts.md`; xác nhận `validate_dashboard.py` 6/6 và `pytest` 22 passed | (branch `CP2/namph`) | Chạy incident thật (`rag_slow`, `tool_fail`) trước khi build dashboard cho ra dữ liệu thuyết phục hơn nhiều so với chỉ chạy load test bình thường |
 | Son (M1 — Logging & PII) | CP2 (hỗ trợ M3): chạy lại quy trình tái tạo evidence (baseline → `rag_slow` → `tool_fail`) trên log sau CP1, đối chiếu từng field với `config/dashboard.yaml`/`build_dashboard_data.py`; xác nhận không lệch field, không cần sửa `app/`; `validate_dashboard.py` 6/6, `pytest` 22 passed | (branch `CP2/Son`) | Log format ổn định qua nhiều thay đổi (CP1 → CP2) nhờ contract rõ ràng (`config/dashboard.yaml`) tách biệt khỏi cách log được sinh ra |
+| Son (M1 — Logging & PII) | CP1: Hoàn thiện logic `app/middleware.py`, `app/pii.py`, `app/logging_config.py` và `app/main.py`. Cấu hình thành công Correlation ID, PII redaction (ẩn email, sđt) và bổ sung ngữ cảnh. Chạy validate đạt 100/100 điểm. | (branch `CP1/Son`) | Cấu hình structlog processors cần chú ý thứ tự chạy để redact được hết log trước khi in ra file JSONL |
+| Tên M2 (M2 — Tracing & Prompt) | CP2: Cấu hình Langfuse SDK, thêm decorator `@observe` vào `app/agent.py`. Thiết lập 2 version prompt trên Langfuse, đổi label và rollback. Thu thập đầy đủ ảnh trace waterfall cung cấp cho M4. CP3: Cấu hình thêm `@observe` cho `mock_rag.py` để làm rõ bottleneck. | (branch `CP2/M2`) | Thấy rõ sức mạnh của trace waterfall trong việc hiển thị chi tiết thời gian chạy của từng span con |
+| Tên M4 (M4 — Incident & Report) | CP0-CP3: Khởi tạo khung evidence, tổng hợp bằng chứng từ M1, M2, M3. Kích hoạt challenge `rag_slow`, chạy load test và điều phối phân tích Metrics -> Traces -> Logs để tìm ra Root Cause. Viết và chốt báo cáo `REPORT.md`. | (branch `CP3/M4`) | Hiểu được bức tranh toàn cảnh: Metrics để báo động, Traces để khoanh vùng, Logs để tìm nguyên nhân gốc rễ |
